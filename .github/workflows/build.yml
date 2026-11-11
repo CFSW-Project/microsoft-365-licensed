@@ -1,9 +1,10 @@
 
+
 name: Build iOS Tweak
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -14,16 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Theos
-        uses: theos/setup-theos@main
+      - name: Install Theos
+        uses: Randomblock1/theos-action@v1
 
       - name: Build Debian Package
         run: |
           make clean
-          make package
+          make package FINALPACKAGE=1
 
       - name: Upload Debian Package
         uses: actions/upload-artifact@v6
         with:
           name: Debian-Package
           path: packages/*.deb
+          if-no-files-found: error
