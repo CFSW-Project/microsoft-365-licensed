@@ -8,8 +8,7 @@ on:
 
 jobs:
   build:
-    
-runs-on: macos-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -38,7 +37,7 @@ runs-on: macos-latest
         run: |
           DYLIB=$(find build/Build/Products -name "ms365Licensed.dylib" | head -1)
           echo "Found: $DYLIB"
-          lipo -info "$DYLIB"   # must say arm64
+          lipo -info "$DYLIB"
           mkdir -p artifact
           cp "$DYLIB" artifact/
 
@@ -47,4 +46,3 @@ runs-on: macos-latest
         with:
           name: ms365Licensed-ios
           path: artifact/ms365Licensed.dylib
-
