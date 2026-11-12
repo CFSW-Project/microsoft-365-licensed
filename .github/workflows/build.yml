@@ -1,30 +1,51 @@
 
 
-name: Build iOS Tweak (Rootless)
+name: Build ms365Licensed
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:   # allows manual trigger
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-14   # or macos-13 / macos-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install Theos
-        uses: Randomblock1/theos-action@v1
-
-      - name: Build Rootless Debian Package
+      - name: List available schemes (debugging aid)
         run: |
-          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          cd ms365Licensed
+          xcodebuild -list -workspace ms365Licensed.xcodeproj/project.xcworkspace || \
+          xcodebuild -list -project ms365Licensed.xcodeproj
 
-      - name: Upload Debian Package
-        uses: actions/upload-artifact@v6
+      - name: Build dylib
+        run: |
+          xcodebuild \
+            -project ms365Licensed/ms365Licensed.xcodeproj \
+            -scheme ms365Licensed \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Locate dylib
+        run: |
+          DYLIB=$(find build -name "ms365Licensed.dylib" | head -1)
+          echo "Found: $DYLIB"
+          mkdir -p artifact
+          cp "$DYLIB" artifact/
+          # Ad-hoc sign it so it can be injected on your Mac
+          codesign --force --sign - artifact/ms365Licensed.dylib
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: Rootless-Debian-Package
-          path: packages/*.deb
-          if-no-files-found: error
+          name: ms365Licensed-dylib
+          path: artifact/ms365Licensed.dylib
