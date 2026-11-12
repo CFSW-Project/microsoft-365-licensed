@@ -1,51 +1,49 @@
 
-
-name: Build ms365Licensed
+name: Build ms365Licensed (iOS)
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:   # allows manual trigger
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-14   # or macos-13 / macos-latest
+    runs-on: macos-14
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List available schemes (debugging aid)
+      - name: List schemes
         run: |
-          cd ms365Licensed
-          xcodebuild -list -workspace ms365Licensed.xcodeproj/project.xcworkspace || \
+          xcodebuild -list -project ms365Licensed/ms365Licensed.xcodeproj || \
           xcodebuild -list -project ms365Licensed.xcodeproj
 
-      - name: Build dylib
+      - name: Build dylib for iOS
         run: |
           xcodebuild \
             -project ms365Licensed/ms365Licensed.xcodeproj \
             -scheme ms365Licensed \
             -configuration Release \
+            -sdk iphoneos \
             -derivedDataPath build \
+            ARCHS=arm64 \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean build
+            clean build | tail -20
 
-      - name: Locate dylib
+      - name: Locate & package dylib
         run: |
-          DYLIB=$(find build -name "ms365Licensed.dylib" | head -1)
+          DYLIB=$(find build/Build/Products -name "ms365Licensed.dylib" | head -1)
           echo "Found: $DYLIB"
+          lipo -info "$DYLIB"   # must say arm64
           mkdir -p artifact
           cp "$DYLIB" artifact/
-          # Ad-hoc sign it so it can be injected on your Mac
-          codesign --force --sign - artifact/ms365Licensed.dylib
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ms365Licensed-dylib
+          name: ms365Licensed-ios
           path: artifact/ms365Licensed.dylib
+
